@@ -38,7 +38,15 @@ const VideoDetails = () => {
     setVideoData(video || null);
     setPreviewSource(courseEntireData.thumbnail);
     setVideoEnded(false);
-  }, [courseSectionData, courseEntireData, location.pathname]);
+  }, [
+    courseSectionData,
+    courseEntireData,
+    location.pathname,
+    courseId,
+    navigate,
+    sectionId,
+    subSectionId,
+  ]);
 
   const handlePlay = () => {
     setPlaying(true);
