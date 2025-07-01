@@ -10,18 +10,19 @@ export default function EnrolledCourses() {
   const navigate = useNavigate();
 
   const [enrolledCourses, setEnrolledCourses] = useState(null);
-  const getEnrolledCourses = async () => {
-    try {
-      const res = await getUserEnrolledCourses(token);
-      // console.log(res);
-      setEnrolledCourses(res);
-    } catch (error) {
-      console.log("Could not fetch enrolled courses.");
-    }
-  };
   useEffect(() => {
+    const getEnrolledCourses = async () => {
+      try {
+        // Replace with your actual API logic
+        const res = await api.get("/enrolled-courses");
+        setCourses(res.data);
+      } catch (error) {
+        console.error("Failed to fetch enrolled courses", error);
+      }
+    };
+
     getEnrolledCourses();
-  }, [getEnrolledCourses]);
+  }, []);
 
   return (
     <>
