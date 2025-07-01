@@ -23,7 +23,7 @@ export default function EnrolledCourses() {
     };
 
     getEnrolledCourses();
-  }, []);
+  }, [token]);
 
   return (
     <>
