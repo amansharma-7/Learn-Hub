@@ -23,7 +23,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "https://learnhub0.netlify.app/",
+    origin: "https://learnhub0.netlify.app",
     credentials: true,
   })
 );
