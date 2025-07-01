@@ -21,7 +21,7 @@ export default function EnrolledCourses() {
   };
   useEffect(() => {
     getEnrolledCourses();
-  }, [token]);
+  }, [getEnrolledCourses]);
 
   return (
     <>
