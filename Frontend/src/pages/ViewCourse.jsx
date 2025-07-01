@@ -35,7 +35,7 @@ export default function ViewCourse() {
       dispatch(setTotalNoOfLectures(lectures));
       // dispatch(setViewCourseLoading(false));
     })();
-  }, []);
+  }, [courseId, dispatch, token]);
 
   // if (viewCourseLoading) return <div></div>;
   return (
