@@ -1,58 +1,57 @@
-const mongoose = require("mongoose");
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const userSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-
-  lastName: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-
-  email: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-
-  password: {
-    type: String,
-    required: true,
-  },
-
-  accountType: {
-    type: String,
-    required: true,
-    enum: ["Admin", "Student", "Instructor"],
-  },
-
-  additionalDetails: {
-    type: mongoose.Schema.ObjectId,
-    required: true,
-    ref: "Profile",
-  },
-
-  courses: [
-    {
-      type: mongoose.Schema.ObjectId,
-      ref: "Course",
+const User = sequelize.define(
+  "User",
+  {
+    _id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
     },
-  ],
-
-  image: {
-    type: String,
-    required: true,
+    firstName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    lastName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    accountType: {
+      type: DataTypes.ENUM("Admin", "Student", "Instructor"),
+      allowNull: false,
+    },
+    image: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    token: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    resetPasswordExpires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    profileId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: "profiles", key: "_id" },
+    },
   },
-  token: { type: String },
-  resetPasswordExpires: { type: Date },
-  courseProgress: {
-    type: mongoose.Schema.ObjectId,
-    ref: "CourseProgress",
-  },
-});
+  {
+    tableName: "users",
+    timestamps: false,
+  }
+);
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = User;

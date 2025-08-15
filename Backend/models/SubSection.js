@@ -1,18 +1,22 @@
-const mongoose = require("mongoose");
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const SubSection = new mongoose.Schema({
-  title: {
-    type: String,
+const SubSection = sequelize.define(
+  "SubSection",
+  {
+    _id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    title: DataTypes.STRING,
+    timeDuration: DataTypes.STRING,
+    description: DataTypes.TEXT,
+    videoUrl: DataTypes.STRING,
+    sectionId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: { model: "sections", key: "_id" },
+      onDelete: "CASCADE",
+    },
   },
-  timeDuration: {
-    type: String,
-  },
-  description: {
-    type: String,
-  },
-  videoUrl: {
-    type: String,
-  },
-});
+  { tableName: "sub_sections", timestamps: false }
+);
 
-module.exports = mongoose.model("SubSection", SubSection);
+module.exports = SubSection;

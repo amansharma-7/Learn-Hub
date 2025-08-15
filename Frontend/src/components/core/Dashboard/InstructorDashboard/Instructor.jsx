@@ -17,7 +17,6 @@ export default function Instructor() {
       setLoading(true);
       const instructorApiData = await getInstructorData(token);
       const result = await fetchInstructorCourses(token);
-      console.log("courses -> ", result);
       if (instructorApiData.length) setInstructorData(instructorApiData);
       if (result) {
         setCourses(result);
@@ -26,15 +25,17 @@ export default function Instructor() {
     })();
   }, [token]);
 
-  const totalAmount = instructorData?.reduce(
-    (acc, curr) => acc + curr.totalAmountGenerated,
-    0
-  );
+  const totalAmount =
+    instructorData?.reduce(
+      (acc, curr) => acc + (curr.totalAmountGenerated || 0),
+      0
+    ) || 0;
 
-  const totalStudents = instructorData?.reduce(
-    (acc, curr) => acc + curr.totalStudentsEnrolled,
-    0
-  );
+  const totalStudents =
+    instructorData?.reduce(
+      (acc, curr) => acc + (curr.totalStudentsEnrolled || 0),
+      0
+    ) || 0;
 
   return (
     <div>
@@ -75,13 +76,13 @@ export default function Instructor() {
                 <div>
                   <p className="text-lg text-richblack-200">Total Students</p>
                   <p className="text-3xl font-semibold text-richblack-50">
-                    {totalStudents}
+                    {totalStudents || 0}
                   </p>
                 </div>
                 <div>
                   <p className="text-lg text-richblack-200">Total Income</p>
                   <p className="text-3xl font-semibold text-richblack-50">
-                    Rs. {totalAmount}
+                    Rs. {totalAmount || 0}
                   </p>
                 </div>
               </div>
@@ -109,7 +110,7 @@ export default function Instructor() {
                     </p>
                     <div className="mt-1 flex items-center space-x-2">
                       <p className="text-xs font-medium text-richblack-300">
-                        {course.studentsEnrolled.length} students
+                        {course.studentsEnrolled?.length} students
                       </p>
                       <p className="text-xs font-medium text-richblack-300">
                         |

@@ -8,7 +8,10 @@ import { updateCompletedLectures } from "../../../slices/viewCourseSlice";
 import IconBtn from "../../common/IconBtn";
 
 const VideoDetails = () => {
-  const { courseId, sectionId, subSectionId } = useParams();
+  const { courseId } = useParams();
+  const sectionId = parseInt(useParams().sectionId, 10);
+  const subSectionId = parseInt(useParams().subSectionId, 10);
+
   const navigate = useNavigate();
   const location = useLocation();
   const playerRef = useRef(null);
@@ -30,11 +33,12 @@ const VideoDetails = () => {
       return;
     }
 
-    const section = courseSectionData.find(
-      (course) => course._id === sectionId
+    const section = courseSectionData.find((course) => {
+      return course._id === sectionId;
+    });
+    const video = section?.subSections.find(
+      (data) => data._id === subSectionId
     );
-    const video = section?.subSection.find((data) => data._id === subSectionId);
-
     setVideoData(video || null);
     setPreviewSource(courseEntireData.thumbnail);
     setVideoEnded(false);

@@ -22,21 +22,19 @@ export default function ViewCourse() {
   useEffect(() => {
     (async () => {
       const courseData = await getFullDetailsOfCourse(courseId, token);
-      // console.log("Course Data here... ", courseData.data.data.courseDetails);
       dispatch(
-        setCourseSectionData(courseData.data.data.courseDetails.courseContent)
+        setCourseSectionData(courseData.data.data.courseDetails.sections)
       );
       dispatch(setEntireCourseData(courseData.data.data.courseDetails));
       dispatch(setCompletedLectures(courseData.data.data.completedVideos));
       let lectures = 0;
-      courseData?.data?.data?.courseDetails?.courseContent?.forEach((sec) => {
-        lectures += sec.subSection.length;
+      courseData?.data?.data?.courseDetails?.sections?.forEach((sec) => {
+        lectures += sec.subSections.length;
       });
       dispatch(setTotalNoOfLectures(lectures));
       // dispatch(setViewCourseLoading(false));
     })();
   }, [courseId, dispatch, token]);
-
   // if (viewCourseLoading) return <div></div>;
   return (
     <>

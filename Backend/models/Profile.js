@@ -1,20 +1,23 @@
-const mongoose = require("mongoose");
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const profileSchema = new mongoose.Schema({
-  gender: {
-    type: String,
+const Profile = sequelize.define(
+  "Profile",
+  {
+    _id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    gender: DataTypes.STRING,
+    dateOfBirth: DataTypes.STRING,
+    about: DataTypes.STRING,
+    contactNumber: DataTypes.BIGINT,
   },
-  dateOfBirth: {
-    type: String,
-  },
-  about: {
-    type: String,
-    trim: true,
-  },
-  contactNumber: {
-    type: Number,
-    trim: true,
-  },
-});
+  {
+    tableName: "profiles",
+    timestamps: false,
+  }
+);
 
-module.exports = mongoose.model("Profile", profileSchema);
+module.exports = Profile;

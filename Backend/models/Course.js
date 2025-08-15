@@ -1,72 +1,34 @@
-const mongoose = require("mongoose");
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const course = new mongoose.Schema({
-  courseName: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  courseDescription: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  instructor: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-  whatWillYouLearn: {
-    type: String,
-    trim: true,
-  },
-  courseContent: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Section",
+const Course = sequelize.define(
+  "Course",
+  {
+    _id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    courseName: { type: DataTypes.STRING, allowNull: false },
+    courseDescription: { type: DataTypes.STRING, allowNull: false },
+    whatWillYouLearn: { type: DataTypes.TEXT },
+    price: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    thumbnail: { type: DataTypes.STRING },
+    tag: { type: DataTypes.ARRAY(DataTypes.STRING), defaultValue: [] },
+    instructions: { type: DataTypes.ARRAY(DataTypes.STRING), defaultValue: [] },
+    status: {
+      type: DataTypes.ENUM("Draft", "Published"),
+      defaultValue: "Draft",
     },
-  ],
-  ratingAndReviews: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "RatingAndReviews",
+    instructorId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: { model: "users", key: "_id" },
     },
-  ],
-  price: {
-    type: Number,
-    required: true,
-  },
-  thumbnail: {
-    type: String,
-  },
-  tag: {
-    type: [String],
-    ref: "Tag",
-  },
-  Categories: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Category",
-  },
-
-  studentsEnrolled: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      ref: "User",
+    categoryId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: { model: "categories", key: "_id" },
     },
-  ],
-  instructions: {
-    type: [String],
+    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
+  { tableName: "courses", timestamps: false }
+);
 
-  status: {
-    type: String,
-    enum: ["Draft", "Published"],
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
-
-module.exports = mongoose.model("Course", course);
+module.exports = Course;

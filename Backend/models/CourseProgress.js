@@ -1,20 +1,20 @@
-const mongoose = require("mongoose");
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const courseProgress = new mongoose.Schema({
-  courseID: {
-    type: mongoose.Schema.ObjectId,
-    ref: "Course",
-  },
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
-  },
-  completedVideos: [
-    {
-      type: mongoose.Schema.ObjectId,
-      ref: "SubSection",
+const CourseProgress = sequelize.define(
+  "CourseProgress",
+  {
+    _id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    userId: { type: DataTypes.INTEGER, allowNull: false },
+    courseId: { type: DataTypes.INTEGER, allowNull: false },
+    completedVideos: {
+      type: DataTypes.ARRAY(DataTypes.INTEGER), // store subsection IDs
+      defaultValue: [],
     },
-  ],
-});
+    progressPercentage: { type: DataTypes.FLOAT, defaultValue: 0 },
+    lastAccessed: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  },
+  { tableName: "course_progress", timestamps: false }
+);
 
-module.exports = mongoose.model("CourseProgress", courseProgress);
+module.exports = CourseProgress;

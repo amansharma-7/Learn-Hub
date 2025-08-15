@@ -1,245 +1,247 @@
-const Profile = require("../models/Profile");
-const CourseProgress = require("../models/CourseProgress");
-const Course = require("../models/Course");
-const User = require("../models/User");
 const { uploadImageToCloudinary } = require("../utils/imageUploader");
 const { convertSecondsToDuration } = require("../utils/secToDuration");
 
-const mongoose = require("mongoose");
+const User = require("../models/User");
+const Profile = require("../models/Profile");
+const Course = require("../models/Course");
+const CourseProgress = require("../models/CourseProgress");
+const { Section, SubSection } = require("../models");
 
+// Update user profile
 exports.updateProfile = async (req, res) => {
   try {
-    const {
-      firstName = "",
-      lastName = "",
-      dateOfBirth = "",
-      about = "",
-      contactNumber = "",
-      gender = "",
-    } = req.body;
-    const id = req.user.id;
-
-    // Find the profile by id
-    const userDetails = await User.findById(id);
-    const profile = await Profile.findById(userDetails.additionalDetails);
-
-    const user = await User.findByIdAndUpdate(id, {
-      firstName,
-      lastName,
+    const { firstName, lastName, dateOfBirth, about, contactNumber, gender } =
+      req.body;
+    const userId = req.user._id; // changed
+    const user = await User.findByPk(userId, {
+      include: {
+        model: Profile,
+        as: "profile", // required
+      },
     });
-    await user.save();
 
-    // Update the profile fields
-    profile.dateOfBirth = dateOfBirth;
-    profile.about = about;
-    profile.contactNumber = contactNumber;
-    profile.gender = gender;
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
 
-    // Save the updated profile
-    await profile.save();
+    await user.update({ firstName, lastName });
 
-    // Find the updated user details
-    const updatedUserDetails = await User.findById(id)
-      .populate("additionalDetails")
-      .exec();
-
-    return res.json({
-      success: true,
-      message: "Profile updated successfully",
-      updatedUserDetails,
-    });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
-};
-
-exports.deleteAccount = async (req, res) => {
-  try {
-    const id = req.user.id;
-    console.log(id);
-    const user = await User.findById({ _id: id });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
+    if (user.Profile) {
+      await user.Profile.update({ dateOfBirth, about, contactNumber, gender });
+    } else {
+      await Profile.create({
+        userId: user._id, // changed
+        dateOfBirth,
+        about,
+        contactNumber,
+        gender,
       });
     }
-    // Delete Assosiated Profile with the User
-    await Profile.findByIdAndDelete({
-      _id: new mongoose.Types.ObjectId(user.additionalDetails),
+
+    const updatedUser = await User.findByPk(userId, {
+      include: {
+        model: Profile,
+        as: "profile", // required
+      },
     });
-    for (const courseId of user.courses) {
-      await Course.findByIdAndUpdate(
-        courseId,
-        { $pull: { studentsEnroled: id } },
-        { new: true }
-      );
-    }
-    // Now Delete User
-    await User.findByIdAndDelete({ _id: id });
-    res.status(200).json({
+
+    res.json({
       success: true,
-      message: "User deleted successfully",
+      message: "Profile updated successfully",
+      updatedUserDetails: updatedUser,
     });
-    await CourseProgress.deleteMany({ userId: id });
   } catch (error) {
-    console.log(error);
-    res
-      .status(500)
-      .json({ success: false, message: "User Cannot be deleted successfully" });
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 
+// Delete user account
+exports.deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user._id; // changed
+
+    const user = await User.findByPk(userId, { include: [Profile, Course] });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+
+    // Remove user from enrolled courses
+    if (user.Courses.length > 0) {
+      for (const course of user.Courses) {
+        await course.removeStudent(user);
+      }
+    }
+
+    // Delete user's profile
+    if (user.Profile) await user.Profile.destroy();
+
+    // Delete course progress
+    await CourseProgress.destroy({ where: { userId } }); // updated
+
+    // Delete user
+    await user.destroy();
+
+    res
+      .status(200)
+      .json({ success: true, message: "User deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Could not delete user" });
+  }
+};
+
+// Get all user details
 exports.getAllUserDetails = async (req, res) => {
   try {
-    const id = req.user.id;
-    const userDetails = await User.findById(id)
-      .populate("additionalDetails")
-      .exec();
-    console.log(userDetails);
+    const userId = req.user._id; // changed
+
+    const user = await User.findByPk(userId, { include: Profile });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+
     res.status(200).json({
       success: true,
-      message: "User Data fetched successfully",
-      data: userDetails,
+      message: "User data fetched successfully",
+      data: user,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    console.error(error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// Update Display Picture
 exports.updateDisplayPicture = async (req, res) => {
   try {
+    const userId = req.user._id; // changed
     const displayPicture = req.files.displayPicture;
-    const userId = req.user.id;
+
     const image = await uploadImageToCloudinary(
       displayPicture,
       process.env.FOLDER_NAME,
       1000,
       1000
     );
-    const updatedProfile = await User.findByIdAndUpdate(
-      { _id: userId },
+
+    const updatedUser = await User.update(
       { image: image.secure_url },
-      { new: true }
+      { where: { _id: userId }, returning: true, plain: true } // changed
     );
-    res.send({
+
+    res.json({
       success: true,
-      message: `Image Updated successfully`,
-      data: updatedProfile,
+      message: "Image updated successfully",
+      data: updatedUser[1], // Sequelize returns [count, updatedRow]
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    console.error(error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// Get enrolled courses with progress
 exports.getEnrolledCourses = async (req, res) => {
   try {
-    const userId = req.user.id;
-    let userDetails = await User.findOne({ _id: userId })
-      .populate({
-        path: "courses",
-        populate: {
-          path: "courseContent",
-          populate: {
-            path: "subSection",
+    const userId = req.user._id;
+
+    const user = await User.findByPk(userId, {
+      include: {
+        model: Course,
+        as: "enrolledCourses",
+        include: [
+          {
+            model: CourseProgress,
+            as: "progresses",
+            where: { userId },
+            required: false,
           },
-        },
-      })
-      .exec();
+          {
+            model: Section,
+            as: "sections",
+            include: { model: SubSection, as: "subSections" },
+          },
+        ],
+      },
+    });
 
-    if (!userDetails) {
-      return res.status(400).json({
-        success: false,
-        message: `Could not find user with id: ${userId}`,
-      });
-    }
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
 
-    userDetails = userDetails.toObject(); // Convert to plain JS object
+    const coursesData = [];
 
-    for (let i = 0; i < userDetails.courses.length; i++) {
+    for (const course of user.enrolledCourses) {
       let totalDurationInSeconds = 0;
-      let SubsectionLength = 0;
+      let totalSubsections = 0;
 
-      for (let j = 0; j < userDetails.courses[i].courseContent.length; j++) {
-        totalDurationInSeconds += userDetails.courses[i].courseContent[
-          j
-        ].subSection.reduce(
-          (acc, curr) => acc + parseInt(curr.timeDuration || 0), // Ensure timeDuration is valid
+      for (const section of course.sections || []) {
+        totalDurationInSeconds += (section.subSections || []).reduce(
+          (acc, sub) => acc + parseInt(sub.timeDuration || 0),
           0
         );
-        userDetails.courses[i].totalDuration = convertSecondsToDuration(
-          totalDurationInSeconds
-        );
-        SubsectionLength +=
-          userDetails.courses[i].courseContent[j].subSection.length;
+        totalSubsections += (section.subSections || []).length;
       }
 
-      let courseProgressCount = await CourseProgress.findOne({
-        courseID: userDetails.courses[i]._id,
-        userId: userId,
+      const progress = course.progresses?.[0];
+      const completed = progress?.completedVideos?.length || 0;
+
+      const progressPercentage =
+        totalSubsections === 0
+          ? 100
+          : Math.round((completed / totalSubsections) * 100 * 100) / 100;
+
+      coursesData.push({
+        ...course.toJSON(),
+        totalDuration: convertSecondsToDuration(totalDurationInSeconds),
+        progressPercentage,
       });
-
-      courseProgressCount = courseProgressCount?.completedVideos.length || 0;
-
-      if (SubsectionLength === 0) {
-        userDetails.courses[i].progressPercentage = 100;
-      } else {
-        const multiplier = Math.pow(10, 2);
-        userDetails.courses[i].progressPercentage =
-          Math.round(
-            (courseProgressCount / SubsectionLength) * 100 * multiplier
-          ) / multiplier;
-      }
-
-      // console.log("Updated course:", userDetails.courses[i]); // Debugging
     }
 
-    return res.status(200).json({
-      success: true,
-      data: userDetails.courses,
-    });
+    res.status(200).json({ success: true, data: coursesData });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    console.error(error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.instructorDashboard = async (req, res) => {
   try {
-    // console.log(req.user.id);
-    const courseDetails = await Course.find({ instructor: req.user.id });
-    // console.log(courseDetails);
-    const courseData = courseDetails.map((course) => {
-      const totalStudentsEnrolled = course.studentsEnrolled.length;
+    const userId = req.user._id;
+
+    const courses = await Course.findAll({
+      where: { instructorId: userId },
+      include: [
+        {
+          model: User,
+          as: "students", // make sure it matches your association
+          attributes: ["_id"], // only fetch necessary fields
+          through: { attributes: [] }, // omit junction table fields
+        },
+      ],
+    });
+
+    const courseStats = courses.map((course) => {
+      const totalStudentsEnrolled = course.students?.length || 0;
       const totalAmountGenerated = totalStudentsEnrolled * course.price;
 
-      // Create a new object with the additional fields
-      const courseDataWithStats = {
-        _id: course._id,
+      return {
+        id: course.id, // use `id` unless your model has `_id`
         courseName: course.courseName,
         courseDescription: course.courseDescription,
         totalStudentsEnrolled,
         totalAmountGenerated,
       };
-
-      return courseDataWithStats;
     });
 
-    res.status(200).json({ courses: courseData });
+    res.status(200).json({ courses: courseStats });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({ message: "Server error" });
   }
 };

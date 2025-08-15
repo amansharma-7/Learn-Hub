@@ -1,25 +1,16 @@
-const mongoose = require("mongoose");
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const ratingAndReviews = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.ObjectId,
-    required: true,
-    ref: "User",
+const RatingAndReviews = sequelize.define(
+  "RatingAndReviews",
+  {
+    _id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    userId: { type: DataTypes.INTEGER, allowNull: false },
+    courseId: { type: DataTypes.INTEGER, allowNull: false },
+    rating: { type: DataTypes.FLOAT, allowNull: false },
+    review: { type: DataTypes.TEXT, allowNull: false },
   },
-  rating: {
-    type: Number,
-    required: true,
-  },
-  review: {
-    type: String,
-    required: true,
-  },
-  course: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    ref: "Course",
-    index: true,
-  },
-});
+  { tableName: "rating_and_reviews", timestamps: false }
+);
 
-module.exports = mongoose.model("RatingAndReviews", ratingAndReviews);
+module.exports = RatingAndReviews;

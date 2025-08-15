@@ -1,40 +1,26 @@
-const mongoose = require("mongoose");
-const nodemailer = require("nodemailer");
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 const mailSender = require("../utils/mailSender");
 const emailTemplate = require("../mail/templates/emailVerificationTemplate");
 
-const OTPSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
+const OTP = sequelize.define(
+  "OTP",
+  {
+    _id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    email: { type: DataTypes.STRING, allowNull: false },
+    otp: { type: DataTypes.STRING, allowNull: false },
+    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
-  otp: {
-    type: String,
-    required: true,
-  },
+  { tableName: "otps", timestamps: false }
+);
 
-  createdAt: {
-    type: Date,
-    default: Date.now(),
-    expires: 5 * 60,
-  },
+OTP.beforeCreate(async (otpInstance) => {
+  const emailBody = "Verification Code for Learn Hub login";
+  await mailSender(
+    otpInstance.email,
+    emailBody,
+    emailTemplate(otpInstance.otp)
+  );
 });
 
-// function for send mail
-
-async function sendVerifcationEmail(email, otp) {
-  try {
-    const emailBody = "Verification Code for Learn Hub login";
-    const mailResponse = await mailSender(email, emailBody, emailTemplate(otp));
-  } catch (error) {
-    console.log("error occured while send email", error);
-    throw error;
-  }
-}
-
-OTPSchema.pre("save", async function (next) {
-  await sendVerifcationEmail(this.email, this.otp);
-  next();
-});
-
-module.exports = mongoose.model("OTP", OTPSchema);
+module.exports = OTP;

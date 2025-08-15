@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { BiInfoCircle } from "react-icons/bi";
 import { HiOutlineGlobeAlt } from "react-icons/hi";
 import ReactMarkdown from "react-markdown";
@@ -72,8 +72,8 @@ function CourseDetails() {
   const [totalNoOfLectures, setTotalNoOfLectures] = useState(0);
   useEffect(() => {
     let lectures = 0;
-    response?.courseDetails?.courseContent?.forEach((sec) => {
-      lectures += sec.subSection.length || 0;
+    response?.courseDetails?.sections?.forEach((sec) => {
+      lectures += sec.subSections.length || 0;
     });
     setTotalNoOfLectures(lectures);
   }, [response]);
@@ -94,7 +94,7 @@ function CourseDetails() {
     thumbnail,
     price,
     whatWillYouLearn,
-    courseContent,
+    sections,
     ratingAndReviews,
     instructor,
     studentsEnrolled,
@@ -151,8 +151,8 @@ function CourseDetails() {
               <div className="text-md flex flex-wrap items-center gap-2">
                 <span className="text-yellow-25">{avgReviewCount}</span>
                 <RatingStars Review_Count={avgReviewCount} Star_Size={24} />
-                <span>{`(${ratingAndReviews.length} reviews)`}</span>
-                <span>{`${studentsEnrolled.length} students enrolled`}</span>
+                <span>{`(${ratingAndReviews?.length} reviews)`}</span>
+                <span>{`${studentsEnrolled?.length} students enrolled`}</span>
               </div>
               <div>
                 <p className="">
@@ -207,7 +207,7 @@ function CourseDetails() {
               <div className="flex flex-wrap justify-between gap-2">
                 <div className="flex gap-2">
                   <span>
-                    {courseContent.length} {`section(s)`}
+                    {sections.length} {`section(s)`}
                   </span>
                   <span>
                     {totalNoOfLectures} {`lecture(s)`}
@@ -227,7 +227,7 @@ function CourseDetails() {
 
             {/* Course Details Accordion */}
             <div className="py-4">
-              {courseContent?.map((course, index) => (
+              {sections?.map((course, index) => (
                 <CourseAccordionBar
                   course={course}
                   key={index}

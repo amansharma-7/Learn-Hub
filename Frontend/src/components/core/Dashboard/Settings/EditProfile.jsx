@@ -9,6 +9,7 @@ const genders = ["Male", "Female", "Non-Binary", "Prefer not to say", "Other"];
 
 export default function EditProfile() {
   const { user } = useSelector((state) => state.profile);
+  console.log(user);
   const { token } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const dispatch = useDispatch();

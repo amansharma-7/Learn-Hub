@@ -1,9 +1,12 @@
+const { Op } = require("sequelize");
 const Category = require("../models/Category");
+const Course = require("../models/Course");
+const User = require("../models/User");
 
-//creating Category
 exports.createCategory = async (req, res) => {
   try {
     const { name, description } = req.body;
+
     if (!name || !description) {
       return res.status(403).json({
         success: false,
@@ -11,112 +14,140 @@ exports.createCategory = async (req, res) => {
       });
     }
 
-    //create entry in DB
-    const CategoryDetails = Category.create({
-      name: name,
-      description: description,
-    });
+    await Category.create({ name, description });
 
     res.status(200).json({
       success: true,
       message: "Category created successfully",
     });
   } catch (error) {
-    res.status(403).json({
+    console.error(error);
+    res.status(500).json({
       success: false,
-      message: "error while creating Category ,please try again",
+      message: "Error while creating category, please try again",
     });
   }
 };
 
-//get all Categories
-
+// Get all Categories
 exports.showAllCategories = async (req, res) => {
   try {
-    const allCategories = await Category.find(
-      {},
-      { name: true, description: true }
-    );
+    const allCategories = await Category.findAll({
+      attributes: ["_id", "name", "description"],
+    });
+
     res.status(200).json({
       success: true,
-      message: "All Categories fectched successfully",
+      message: "All categories fetched successfully",
       allCategories,
     });
   } catch (error) {
-    res.status(403).json({
+    console.error(error);
+    res.status(500).json({
       success: false,
-      message: "error while fetching all allCategories ,please try again",
+      message: "Error while fetching categories, please try again",
     });
   }
 };
 
-//category page details
+// Category page details
 exports.categoryPageDetails = async (req, res) => {
   try {
     const { categoryId } = req.body;
-    // Get courses for the specified category
-    const selectedCategory = await Category.findById(categoryId)
-      .populate({
-        path: "courses",
-        match: { status: "Published" },
-        populate: {
-          path: "instructor",
-        },
-      })
-      .exec();
 
-    // Handle the case when the category is not found
+    // Get selected category with published courses and their instructors
+    const selectedCategory = await Category.findByPk(categoryId, {
+      include: {
+        model: Course,
+        as: "courses",
+        where: { status: "Published" },
+        attributes: [
+          "_id",
+          "courseName",
+          "courseDescription",
+          "price",
+          "thumbnail",
+          "tag",
+          "instructions", // <-- explicitly include it
+          "status",
+          "instructorId",
+          "categoryId",
+        ],
+        include: {
+          model: User,
+          as: "instructor",
+          attributes: ["_id", "firstName", "lastName", "email"],
+          required: false,
+        },
+        required: false,
+      },
+    });
+
     if (!selectedCategory) {
-      // console.log("Category not found.");
       return res
         .status(404)
         .json({ success: false, message: "Category not found" });
     }
-    // Handle the case when there are no courses
+
     if (selectedCategory.courses.length === 0) {
-      // console.log("No courses found for the selected category.");
       return res.status(404).json({
         success: false,
-        message: "No courses found for the selected category.",
+        message: "No courses found for the selected category",
       });
     }
 
-    // Get courses for other categories
-    const categoriesExceptSelected = await Category.find({
-      _id: { $ne: categoryId },
-      course: { $not: { $size: 0 } },
+    // Get other categories that have courses
+    const categoriesExceptSelected = await Category.findAll({
+      where: { _id: { [Op.ne]: categoryId } },
+      include: {
+        model: Course,
+        as: "courses",
+        where: { status: "Published" },
+        required: true,
+      },
     });
 
-    function getRandomInt(max) {
-      return Math.floor(Math.random() * max);
+    let differentCategory = null;
+    if (categoriesExceptSelected.length > 0) {
+      const randomIndex = Math.floor(
+        Math.random() * categoriesExceptSelected.length
+      );
+      differentCategory = await Category.findByPk(
+        categoriesExceptSelected[randomIndex]._id,
+        {
+          include: {
+            model: Course,
+            as: "courses",
+            where: { status: "Published" },
+            include: {
+              model: User,
+              as: "instructor",
+              attributes: ["_id", "firstName", "lastName", "email"],
+            },
+            required: false,
+          },
+        }
+      );
     }
 
-    let differentCategory = await Category.findOne(
-      categoriesExceptSelected[getRandomInt(categoriesExceptSelected.length)]
-        ._id
-    )
-      .populate({
-        path: "courses",
-        match: { status: "Published" },
-        populate: {
-          path: "instructor",
-        },
-      })
-      .exec();
-
     // Get top-selling courses across all categories
-    const allCategories = await Category.find()
-      .populate({
-        path: "courses",
-        match: { status: "Published" },
-        populate: {
-          path: "instructor",
+    const allCategories = await Category.findAll({
+      include: {
+        model: Course,
+        as: "courses",
+        where: { status: "Published" },
+        include: {
+          model: User,
+          as: "instructor",
+          attributes: ["_id", "firstName", "lastName", "email"],
         },
-      })
-      .exec();
-    const allCourses = allCategories.flatMap((category) => category.courses);
+        required: false,
+      },
+    });
+
+    const allCourses = allCategories.flatMap((cat) => cat.courses || []);
     const mostSellingCourses = allCourses
-      .sort((a, b) => b.sold - a.sold)
+      .sort((a, b) => (b.sold || 0) - (a.sold || 0))
       .slice(0, 10);
 
     res.status(200).json({
@@ -128,7 +159,8 @@ exports.categoryPageDetails = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({
+    console.error(error);
+    res.status(500).json({
       success: false,
       message: "Internal server error",
       error: error.message,
